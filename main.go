@@ -3,15 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 )
 
+// fileInfo - представляет собой параметры файла
 type fileInfo struct {
-	Type string
-	Name string
-	Size int64
+	Type string // Тип файла (файл или деректория)
+	Name string // Название файла
+	Size int64  // Размер файла
 }
 
 func main() {
@@ -33,7 +36,6 @@ func main() {
 
 // addFlag - добавляет флаги
 func addFlag() (*string, *string, error) {
-	defaultRootFlag := ""
 	defaultSortFlag := "asc"
 
 	rootFlagPtr := flag.String("root", "", "путь к каталогу с файлами")
@@ -46,8 +48,7 @@ func addFlag() (*string, *string, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
-		defaultRootFlag = currentDir
-		rootFlagPtr = &defaultRootFlag
+		rootFlagPtr = &currentDir
 		fmt.Printf("Должен быть установлен флаг --root, который отвечает за путь к каталогу\n.Значение по умолчанию: %s\n\n", currentDir)
 	}
 
@@ -73,15 +74,21 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	}
 
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
+	var wg sync.WaitGroup
 
 	for index, file := range filesInRootDir {
-		fileInfo, err := getFileInfo(pathRootDir, file)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fileInfoSlice[index] = fileInfo
+		wg.Add(1)
+		go func(index int, file fs.DirEntry, pathRootDir string, fileInfoSlice []fileInfo, wg *sync.WaitGroup) {
+			defer wg.Done()
+			fileInfo, err := getFileInfo(pathRootDir, file)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fileInfoSlice[index] = fileInfo
+		}(index, file, pathRootDir, fileInfoSlice, &wg)
 	}
+	wg.Wait()
 
 	return fileInfoSlice, nil
 }
@@ -157,10 +164,11 @@ func getBiggestNameInFileInfoSlice(fileInfoSlice []fileInfo) int {
 
 // convertToOptimalUnit - возврает преобразованные байты в оптимальные единицы измерения
 func convertToOptimalSize(fileSize int64) string {
-	const kiloByte = 1000
-	const megaByte = 1000 * kiloByte
-	const gigaByte = 1000 * megaByte
-	const teraByte = 1000 * gigaByte
+	const bytes = 1000
+	const kiloByte = bytes
+	const megaByte = bytes * kiloByte
+	const gigaByte = bytes * megaByte
+	const teraByte = bytes * gigaByte
 
 	fileSizeFloat := float64(fileSize)
 
@@ -184,8 +192,8 @@ func convertToOptimalSize(fileSize int64) string {
 func sortFileInfo(fileInfoSlice []fileInfo, sortFlag string) {
 	sort.Slice(fileInfoSlice, func(i, j int) bool {
 		if sortFlag == "desc" {
-			return fileInfoSlice[i].Size < fileInfoSlice[j].Size
+			return fileInfoSlice[i].Size > fileInfoSlice[j].Size
 		}
-		return fileInfoSlice[i].Size > fileInfoSlice[j].Size
+		return fileInfoSlice[i].Size < fileInfoSlice[j].Size
 	})
 }
