@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 )
 
 // fileInfo - представляет собой параметры файла
@@ -18,6 +19,8 @@ type fileInfo struct {
 }
 
 func main() {
+	start := time.Now()
+
 	rootFlagPtr, sortFlagPtr, err := addFlag()
 	if err != nil {
 		fmt.Println(err)
@@ -32,6 +35,9 @@ func main() {
 
 	sortFileInfo(fileInfoSlice, *sortFlagPtr)
 	printFileInfo(fileInfoSlice)
+
+	timeFinish := time.Since(start)
+	fmt.Printf("Время завершение программы: %s\n", fmt.Sprintf("%d.%dms", timeFinish.Milliseconds(), timeFinish.Microseconds()/10000))
 }
 
 // addFlag - добавляет флаги
@@ -42,6 +48,10 @@ func addFlag() (*string, *string, error) {
 	sortFlagPtr := flag.String("sort", "", "сортировка")
 
 	flag.Parse()
+
+	if *rootFlagPtr == "" || *sortFlagPtr == "" {
+		flag.PrintDefaults()
+	}
 
 	if *rootFlagPtr == "" {
 		currentDir, err := os.Getwd()
@@ -76,6 +86,7 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
 	var wg sync.WaitGroup
 
+	// заполнения среза fileInfoSlice информацией о файла в директории
 	for index, file := range filesInRootDir {
 		wg.Add(1)
 		go func(index int, file fs.DirEntry, pathRootDir string, fileInfoSlice []fileInfo, wg *sync.WaitGroup) {
