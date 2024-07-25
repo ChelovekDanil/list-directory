@@ -6,15 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 )
 
+// fileInfo - представляет собой параметры файла
 type fileInfo struct {
-	Type string
-	Name string
-	Size int64
+	Type string // Тип файла (файл или деректория)
+	Name string // Название файла
+	Size int64  // Размер файла
 }
 
 func main() {
+	start := time.Now()
+
 	rootFlagPtr, sortFlagPtr, err := addFlag()
 	if err != nil {
 		fmt.Println(err)
@@ -29,25 +33,34 @@ func main() {
 
 	sortFileInfo(fileInfoSlice, *sortFlagPtr)
 	printFileInfo(fileInfoSlice)
+
+	timeFinish := time.Since(start)
+	fmt.Printf("\nВремя завершение программы: %s\n", fmt.Sprintf("%d.%dms", timeFinish.Milliseconds(), timeFinish.Microseconds()/10000))
 }
 
 // addFlag - добавляет флаги
 func addFlag() (*string, *string, error) {
-	defaultRootFlag := ""
 	defaultSortFlag := "asc"
 
 	rootFlagPtr := flag.String("root", "", "путь к каталогу с файлами")
-	sortFlagPtr := flag.String("sort", "", "сортировка")
+	sortFlagPtr := flag.String("sort", "", "сортировка (desc, asc)")
 
 	flag.Parse()
+
+	if *rootFlagPtr == "" || *sortFlagPtr == "" {
+		flag.PrintDefaults()
+	} else if *sortFlagPtr != "asc" && *sortFlagPtr != "desc" {
+		flag.PrintDefaults()
+		return nil, nil, fmt.Errorf("неверно заданы флаги")
+	}
 
 	if *rootFlagPtr == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {
 			return nil, nil, fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
-		defaultRootFlag = currentDir
-		rootFlagPtr = &defaultRootFlag
+		currentDir = "/"
+		rootFlagPtr = &currentDir
 		fmt.Printf("Должен быть установлен флаг --root, который отвечает за путь к каталогу\n.Значение по умолчанию: %s\n\n", currentDir)
 	}
 
@@ -74,13 +87,22 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
 
+	// заполнения среза fileInfoSlice информацией о файла в директории
 	for index, file := range filesInRootDir {
-		fileInfo, err := getFileInfo(pathRootDir, file)
+		flInfo, err := getFileInfo(pathRootDir, file)
 		if err != nil {
 			fmt.Println(err)
-			continue
+
+			fileType := "Файл"
+			fileName := file.Name()
+			fileSize := 4000
+
+			if file.IsDir() {
+				fileType = "Дир"
+			}
+			flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
 		}
-		fileInfoSlice[index] = fileInfo
+		fileInfoSlice[index] = flInfo
 	}
 
 	return fileInfoSlice, nil
@@ -157,10 +179,11 @@ func getBiggestNameInFileInfoSlice(fileInfoSlice []fileInfo) int {
 
 // convertToOptimalUnit - возврает преобразованные байты в оптимальные единицы измерения
 func convertToOptimalSize(fileSize int64) string {
-	const kiloByte = 1000
-	const megaByte = 1000 * kiloByte
-	const gigaByte = 1000 * megaByte
-	const teraByte = 1000 * gigaByte
+	const bytes = 1000
+	const kiloByte = bytes
+	const megaByte = bytes * kiloByte
+	const gigaByte = bytes * megaByte
+	const teraByte = bytes * gigaByte
 
 	fileSizeFloat := float64(fileSize)
 
@@ -184,8 +207,8 @@ func convertToOptimalSize(fileSize int64) string {
 func sortFileInfo(fileInfoSlice []fileInfo, sortFlag string) {
 	sort.Slice(fileInfoSlice, func(i, j int) bool {
 		if sortFlag == "desc" {
-			return fileInfoSlice[i].Size < fileInfoSlice[j].Size
+			return fileInfoSlice[i].Size > fileInfoSlice[j].Size
 		}
-		return fileInfoSlice[i].Size > fileInfoSlice[j].Size
+		return fileInfoSlice[i].Size < fileInfoSlice[j].Size
 	})
 }
