@@ -37,7 +37,7 @@ func main() {
 	printFileInfo(fileInfoSlice)
 
 	timeFinish := time.Since(start)
-	fmt.Printf("Время завершение программы: %s\n", fmt.Sprintf("%d.%dms", timeFinish.Milliseconds(), timeFinish.Microseconds()/10000))
+	fmt.Printf("\nВремя завершение программы: %s\n", fmt.Sprintf("%d.%dms", timeFinish.Milliseconds(), timeFinish.Microseconds()/10000))
 }
 
 // addFlag - добавляет флаги
@@ -45,12 +45,15 @@ func addFlag() (*string, *string, error) {
 	defaultSortFlag := "asc"
 
 	rootFlagPtr := flag.String("root", "", "путь к каталогу с файлами")
-	sortFlagPtr := flag.String("sort", "", "сортировка")
+	sortFlagPtr := flag.String("sort", "", "сортировка (desc, asc)")
 
 	flag.Parse()
 
 	if *rootFlagPtr == "" || *sortFlagPtr == "" {
 		flag.PrintDefaults()
+	} else if *sortFlagPtr != "asc" && *sortFlagPtr != "desc" {
+		flag.PrintDefaults()
+		return nil, nil, fmt.Errorf("неверно заданы флаги")
 	}
 
 	if *rootFlagPtr == "" {
@@ -58,6 +61,7 @@ func addFlag() (*string, *string, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
+		currentDir = "/"
 		rootFlagPtr = &currentDir
 		fmt.Printf("Должен быть установлен флаг --root, который отвечает за путь к каталогу\n.Значение по умолчанию: %s\n\n", currentDir)
 	}
@@ -91,12 +95,20 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 		wg.Add(1)
 		go func(index int, file fs.DirEntry, pathRootDir string, fileInfoSlice []fileInfo, wg *sync.WaitGroup) {
 			defer wg.Done()
-			fileInfo, err := getFileInfo(pathRootDir, file)
+			flInfo, err := getFileInfo(pathRootDir, file)
 			if err != nil {
 				fmt.Println(err)
-				return
+
+				fileType := "Файл"
+				fileName := file.Name()
+				fileSize := 4000
+
+				if file.IsDir() {
+					fileType = "Дир"
+				}
+				flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
 			}
-			fileInfoSlice[index] = fileInfo
+			fileInfoSlice[index] = flInfo
 		}(index, file, pathRootDir, fileInfoSlice, &wg)
 	}
 	wg.Wait()
