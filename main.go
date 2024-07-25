@@ -3,10 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
-	"sync"
 )
 
 type fileInfo struct {
@@ -22,11 +21,14 @@ func main() {
 		return
 	}
 
-	err = checkDirectory(*rootFlagPtr, *sortFlagPtr)
+	fileInfoSlice, err := getFileInfoSlice(*rootFlagPtr)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	sortFileInfo(fileInfoSlice, *sortFlagPtr)
+	printFileInfo(fileInfoSlice)
 }
 
 // addFlag - добавляет флаги
@@ -57,58 +59,73 @@ func addFlag() (*string, *string, error) {
 	return rootFlagPtr, sortFlagPtr, nil
 }
 
-// listDirectory - выводит список файлов
-func checkDirectory(pathRootDir string, sort string) error {
+// getFileInfoSlice - возвращает срез типа fileInfo из определенной директории
+func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	rootDir, err := os.Open(pathRootDir)
 	if err != nil {
-		return fmt.Errorf("ошибка при открытии деректории: %s", err)
+		return nil, fmt.Errorf("ошибка при открытии деректории: %s", err)
 	}
 	defer rootDir.Close()
 
 	filesInRootDir, err := rootDir.ReadDir(-1)
 	if err != nil {
-		return fmt.Errorf("ошибка при чтении файлов в деректории: %s", err)
+		return nil, fmt.Errorf("ошибка при чтении файлов в деректории: %s", err)
 	}
 
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
-	var wg sync.WaitGroup
 
 	for index, file := range filesInRootDir {
-		wg.Add(1)
-		go func(index int, file fs.DirEntry, fileInfoSlice []fileInfo, wg *sync.WaitGroup) {
-			defer wg.Done()
-
-			fileInfo, err := getFileInfo(file)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			fileInfoSlice[index] = fileInfo
-		}(index, file, fileInfoSlice, &wg)
+		fileInfo, err := getFileInfo(pathRootDir, file)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fileInfoSlice[index] = fileInfo
 	}
-	wg.Wait()
 
-	sortFileInfo(fileInfoSlice, sort)
-	printFileInfo(fileInfoSlice)
-
-	return nil
+	return fileInfoSlice, nil
 }
 
 // getFileInfo - возвращает информацию о файле
-func getFileInfo(file os.DirEntry) (fileInfo, error) {
+func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 	fileDirInfo, err := file.Info()
 	if err != nil {
 		return fileInfo{}, fmt.Errorf("ошибка при чтении информации о файле: %s", err)
 	}
 
 	fileType := "Файл"
+	fileSize := fileDirInfo.Size()
+	fileName := fileDirInfo.Name()
 
 	if fileDirInfo.IsDir() {
 		fileType = "Дир"
+		fileSize, err = getSizeFilesRecursion(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
+		if err != nil {
+			return fileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
+		}
 	}
 
-	fileInfoRes := fileInfo{Type: fileType, Name: fileDirInfo.Name(), Size: fileDirInfo.Size()}
+	fileInfoRes := fileInfo{Type: fileType, Name: fileName, Size: fileSize}
 	return fileInfoRes, nil
+}
+
+// getSizeFilesRecursion - возвращяет размер каталога проходя по нему рекурсивно
+func getSizeFilesRecursion(pathDir string) (int64, error) {
+	var size int64
+
+	err := filepath.Walk(pathDir, func(pathFile string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("неудалось получить информацию о файле: %s", err)
+		}
+
+		size += info.Size()
+		return nil
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("не удалось пройтись по дериктории: %s", err)
+	}
+	return size, nil
 }
 
 // printFileInfo - выводит информацию из среза типа fileInfo
@@ -117,8 +134,11 @@ func printFileInfo(fileInfoSlice []fileInfo) {
 
 	fmt.Printf("%-6s %-*s %s\n", "Тип", biggestName+2, "Имя", "Размер")
 	for _, fileInfo := range fileInfoSlice {
-		size, unit := convertToOptimalUnit(fileInfo.Size)
-		fmt.Printf("%-6s %-*s %.02f %s\n", fileInfo.Type, biggestName+2, fileInfo.Name, size, unit)
+		if fileInfo.Name == "" || fileInfo.Size == 0 || fileInfo.Type == "" {
+			continue
+		}
+		size := convertToOptimalSize(fileInfo.Size)
+		fmt.Printf("%-6s %-*s %s\n", fileInfo.Type, biggestName+2, fileInfo.Name, size)
 	}
 }
 
@@ -136,20 +156,28 @@ func getBiggestNameInFileInfoSlice(fileInfoSlice []fileInfo) int {
 }
 
 // convertToOptimalUnit - возврает преобразованные байты в оптимальные единицы измерения
-func convertToOptimalUnit(fileSize int64) (float64, string) {
-	resFileSize := float64(fileSize)
-	units := []string{"Байт", "Килобайт", "Мегабайт", "Гигабайт", "Петабайт"}
-	countUnit := 0
+func convertToOptimalSize(fileSize int64) string {
+	const kiloByte = 1000
+	const megaByte = 1000 * kiloByte
+	const gigaByte = 1000 * megaByte
+	const teraByte = 1000 * gigaByte
 
-	for resFileSize >= 1000 {
-		if resFileSize == 1000 {
-			return 1, units[countUnit]
-		}
-		resFileSize /= 1000
-		countUnit++
+	fileSizeFloat := float64(fileSize)
+
+	if fileSize > teraByte {
+		return fmt.Sprintf("%0.2f tb", fileSizeFloat/teraByte)
+	}
+	if fileSize > gigaByte {
+		return fmt.Sprintf("%0.2f gb", fileSizeFloat/gigaByte)
+	}
+	if fileSize > megaByte {
+		return fmt.Sprintf("%0.2f mb", fileSizeFloat/megaByte)
+	}
+	if fileSize > kiloByte {
+		return fmt.Sprintf("%0.2f kb", fileSizeFloat/kiloByte)
 	}
 
-	return resFileSize, units[countUnit]
+	return fmt.Sprintf("%d bytes", fileSize)
 }
 
 // sortFileInfo - сортирует срез типа fileInfo
