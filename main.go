@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -85,23 +87,29 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	}
 
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
+	var wg sync.WaitGroup
 
 	// заполнения среза fileInfoSlice информацией о файла в директории
 	for index, file := range filesInRootDir {
-		flInfo, err := getFileInfo(pathRootDir, file)
-		if err != nil {
-			fmt.Println(err)
+		wg.Add(1)
+		go func(index int, file fs.DirEntry, wg *sync.WaitGroup) {
+			defer wg.Done()
+			flInfo, err := getFileInfo(pathRootDir, file)
+			if err != nil {
+				fmt.Println(err)
 
-			fileType := "Файл"
-			fileName := file.Name()
-			fileSize := 4000
+				fileType := "Файл"
+				fileName := file.Name()
+				fileSize := 4096
 
-			if file.IsDir() {
-				fileType = "Дир"
+				if file.IsDir() {
+					fileType = "Дир"
+				}
+				flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
 			}
-			flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
-		}
-		fileInfoSlice[index] = flInfo
+			fileInfoSlice[index] = flInfo
+		}(index, file, &wg)
+		wg.Wait()
 	}
 
 	return fileInfoSlice, nil
