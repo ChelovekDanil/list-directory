@@ -51,7 +51,7 @@ func main() {
 	}
 }
 
-// fsHandler - функция, которая будет обрабатывать url /fs
+// fsHandler - функция, которая будет обрабатывать url путь /fs
 func fsHandler(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 
@@ -76,21 +76,7 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resultFileInfo)
 }
 
-// getResultFileInfo - возвращает готовый срез структур
-func getFilesInfoResponse(pathRoot string, sortFlag string) ([]fileInfoResponse, error) {
-	filesInfo, err := getFilesInfo(pathRoot)
-	if err != nil {
-		fmt.Println(err)
-		return nil, fmt.Errorf("ошибка при считывании файлов из деректории: %s", err)
-	}
-
-	sortFilesInfo(filesInfo, sortFlag)
-	fileInfoResponseSlice := convertToFilesInfoResponse(filesInfo)
-
-	return fileInfoResponseSlice, nil
-}
-
-// checkArguments - проверяет коректность введенных аргументов запроса
+// checkArgumentsInQuary - проверяет коректность введенных аргументов запроса
 func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	const defaultSortFlag = "asc"
 
@@ -109,6 +95,11 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 		sortFlag = defaultSortFlag
 	}
 
+	_, err := os.Open(pathRoot)
+	if err != nil {
+		return "", "", fmt.Errorf("директории: %s не сущестует: %s", pathRoot, err)
+	}
+
 	if sortFlag != "asc" && sortFlag != "desc" {
 		return "", "", fmt.Errorf("неверно указан аргумент sort должен принимать asc или desc")
 	}
@@ -116,7 +107,21 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	return pathRoot, sortFlag, nil
 }
 
-// getFileInfoSlice - возвращает срез типа fileInfo из определенной директории
+// getFilesInfoResponse - возвращает срез структур filesInfoResponse
+func getFilesInfoResponse(pathRoot string, sortFlag string) ([]fileInfoResponse, error) {
+	filesInfo, err := getFilesInfo(pathRoot)
+	if err != nil {
+		fmt.Println(err)
+		return nil, fmt.Errorf("ошибка при считывании файлов из деректории: %s", err)
+	}
+
+	sortFilesInfo(filesInfo, sortFlag)
+	fileInfoResponseSlice := convertToFilesInfoResponse(filesInfo)
+
+	return fileInfoResponseSlice, nil
+}
+
+// getFilesInfo - возвращает срез типа fileInfo из определенной директории
 func getFilesInfo(pathRootDir string) ([]fileInfo, error) {
 	rootDir, err := os.Open(pathRootDir)
 	if err != nil {
@@ -129,7 +134,7 @@ func getFilesInfo(pathRootDir string) ([]fileInfo, error) {
 		return nil, fmt.Errorf("ошибка при чтении файлов в деректории: %s", err)
 	}
 
-	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
+	filesInfo := make([]fileInfo, len(filesInRootDir))
 	var wg sync.WaitGroup
 
 	// заполнения среза fileInfoSlice информацией о файлах в директории
@@ -154,13 +159,13 @@ func getFilesInfo(pathRootDir string) ([]fileInfo, error) {
 				flInfo = fileInfo{Type: fileType, Name: fileName, Size: fileSize}
 			}
 
-			fileInfoSlice[index] = flInfo
+			filesInfo[index] = flInfo
 		}(index, file, pathRootDir, &wg)
 
 		wg.Wait()
 	}
 
-	return fileInfoSlice, nil
+	return filesInfo, nil
 }
 
 // getFileInfo - возвращает информацию о файле
@@ -176,7 +181,7 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 
 	if fileDirInfo.IsDir() {
 		fileType = "Дир"
-		fileSize, err = getSizeFilesRecursion(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
+		fileSize, err = getSizeDirectory(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
 
 		if err != nil {
 			return fileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
@@ -187,8 +192,8 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 	return fileInfoRes, nil
 }
 
-// getSizeFilesRecursion - возвращяет размер каталога проходя по нему рекурсивно
-func getSizeFilesRecursion(pathDir string) (int64, error) {
+// getSizeDirectory - возвращяет размер каталога проходя по нему рекурсивно
+func getSizeDirectory(pathDir string) (int64, error) {
 	var size int64
 
 	err := filepath.Walk(pathDir, func(pathFile string, info os.FileInfo, err error) error {
@@ -206,21 +211,21 @@ func getSizeFilesRecursion(pathDir string) (int64, error) {
 	return size, nil
 }
 
-// sortFileInfo - сортирует срез типа fileInfo
-func sortFilesInfo(fileInfoSlice []fileInfo, sortFlag string) {
-	sort.Slice(fileInfoSlice, func(i, j int) bool {
+// sortFilesInfo - сортирует срез типа fileInfo
+func sortFilesInfo(filesInfo []fileInfo, sortFlag string) {
+	sort.Slice(filesInfo, func(i, j int) bool {
 		if sortFlag == "desc" {
-			return fileInfoSlice[i].Size > fileInfoSlice[j].Size
+			return filesInfo[i].Size > filesInfo[j].Size
 		}
-		return fileInfoSlice[i].Size < fileInfoSlice[j].Size
+		return filesInfo[i].Size < filesInfo[j].Size
 	})
 }
 
-// convertToFileInfoReponse - конвертирует fileInfo в fileInfoResponse
-func convertToFilesInfoResponse(fileInfoSlice []fileInfo) []fileInfoResponse {
-	filesInfoResponse := make([]fileInfoResponse, len(fileInfoSlice))
+// convertToFilesInfoResponse - конвертирует fileInfo в fileInfoResponse
+func convertToFilesInfoResponse(filesInfo []fileInfo) []fileInfoResponse {
+	filesInfoResponse := make([]fileInfoResponse, len(filesInfo))
 
-	for index, fl := range fileInfoSlice {
+	for index, fl := range filesInfo {
 		fileType := fl.Type
 		fileName := fl.Name
 		fileSize := convertToOptimalSize(fl.Size)
@@ -233,7 +238,7 @@ func convertToFilesInfoResponse(fileInfoSlice []fileInfo) []fileInfoResponse {
 	return filesInfoResponse
 }
 
-// convertToOptimalUnit - возврает преобразованные байты в оптимальные единицы измерения
+// convertToOptimalSize - возврает преобразованные байты в оптимальные единицы измерения
 func convertToOptimalSize(fileSize int64) string {
 	const bytes = 1000
 	const kiloByte = bytes
