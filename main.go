@@ -3,11 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
-	"sync"
 	"time"
 )
 
@@ -61,7 +59,6 @@ func addFlag() (*string, *string, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
-		currentDir = "/"
 		rootFlagPtr = &currentDir
 		fmt.Printf("Должен быть установлен флаг --root, который отвечает за путь к каталогу\n.Значение по умолчанию: %s\n\n", currentDir)
 	}
@@ -88,30 +85,24 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	}
 
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
-	var wg sync.WaitGroup
 
 	// заполнения среза fileInfoSlice информацией о файла в директории
 	for index, file := range filesInRootDir {
-		wg.Add(1)
-		go func(index int, file fs.DirEntry, pathRootDir string, fileInfoSlice []fileInfo, wg *sync.WaitGroup) {
-			defer wg.Done()
-			flInfo, err := getFileInfo(pathRootDir, file)
-			if err != nil {
-				fmt.Println(err)
+		flInfo, err := getFileInfo(pathRootDir, file)
+		if err != nil {
+			fmt.Println(err)
 
-				fileType := "Файл"
-				fileName := file.Name()
-				fileSize := 4000
+			fileType := "Файл"
+			fileName := file.Name()
+			fileSize := 4000
 
-				if file.IsDir() {
-					fileType = "Дир"
-				}
-				flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
+			if file.IsDir() {
+				fileType = "Дир"
 			}
-			fileInfoSlice[index] = flInfo
-		}(index, file, pathRootDir, fileInfoSlice, &wg)
+			flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
+		}
+		fileInfoSlice[index] = flInfo
 	}
-	wg.Wait()
 
 	return fileInfoSlice, nil
 }
