@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,9 +17,9 @@ import (
 
 // fileInfoResponse - представляет собой структу ответа
 type fileInfoResponse struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
-	Size string `json:"size"`
+	Type string `json:"type"` // Тип файла (файл или деректория)
+	Name string `json:"name"` // Название файла
+	Size string `json:"size"` // Размер файла
 }
 
 // fileInfo - представляет собой параметры файла
@@ -43,7 +44,7 @@ func main() {
 
 	port := os.Getenv("SERVER_PORT")
 
-	fmt.Println("сервер стартовал на порту 8080")
+	fmt.Printf("сервер стартовал на порту: %s\n", port)
 	err = http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatalf("ошибка при запуске сервера: %s", err)
@@ -53,10 +54,16 @@ func main() {
 // fsHandler - функция, которая будет обрабатывать url /fs
 func fsHandler(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
-	pathRoot := queryValues.Get("root")
-	sortFlag := queryValues.Get("sort")
 
-	resultFileInfo, err := getResultFileInfo(pathRoot, sortFlag)
+	pathRoot, sortFlag, err := checkArgumentsInQuary(queryValues)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+
+	resultFileInfo, err := getFilesInfoResponse(pathRoot, sortFlag)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
@@ -70,50 +77,47 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // getResultFileInfo - возвращает готовый срез структур
-func getResultFileInfo(pathRoot string, sortFlag string) ([]fileInfoResponse, error) {
-	err := checkArguments(&pathRoot, &sortFlag)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка при чтении агрументов: %s", err)
-	}
-
-	fileInfoSlice, err := getFileInfoSlice(pathRoot)
+func getFilesInfoResponse(pathRoot string, sortFlag string) ([]fileInfoResponse, error) {
+	filesInfo, err := getFilesInfo(pathRoot)
 	if err != nil {
 		fmt.Println(err)
 		return nil, fmt.Errorf("ошибка при считывании файлов из деректории: %s", err)
 	}
 
-	sortFileInfo(fileInfoSlice, sortFlag)
-	fileInfoResponseSlice := convertToFileInfoResponse(fileInfoSlice)
+	sortFilesInfo(filesInfo, sortFlag)
+	fileInfoResponseSlice := convertToFilesInfoResponse(filesInfo)
 
 	return fileInfoResponseSlice, nil
 }
 
 // checkArguments - проверяет коректность введенных аргументов запроса
-func checkArguments(pathRoot *string, sortFlag *string) error {
-	defaultSortFlag := "asc"
+func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
+	const defaultSortFlag = "asc"
 
-	if *pathRoot == "" {
+	pathRoot := queryValues.Get("root")
+	sortFlag := queryValues.Get("sort")
+
+	if pathRoot == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
+			return "", "", fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
-		*pathRoot = currentDir
+		pathRoot = currentDir
 	}
 
-	if *sortFlag == "" {
-		*sortFlag = defaultSortFlag
-		return nil
+	if sortFlag == "" {
+		sortFlag = defaultSortFlag
 	}
 
-	if *sortFlag != "asc" && *sortFlag != "desc" {
-		return fmt.Errorf("неверно указаны агрументы")
+	if sortFlag != "asc" && sortFlag != "desc" {
+		return "", "", fmt.Errorf("неверно указан аргумент sort должен принимать asc или desc")
 	}
 
-	return nil
+	return pathRoot, sortFlag, nil
 }
 
 // getFileInfoSlice - возвращает срез типа fileInfo из определенной директории
-func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
+func getFilesInfo(pathRootDir string) ([]fileInfo, error) {
 	rootDir, err := os.Open(pathRootDir)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии деректории: %s", err)
@@ -128,11 +132,11 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
 	var wg sync.WaitGroup
 
-	// заполнения среза fileInfoSlice информацией о файла в директории
+	// заполнения среза fileInfoSlice информацией о файлах в директории
 	for index, file := range filesInRootDir {
 		wg.Add(1)
 
-		go func(index int, file fs.DirEntry, wg *sync.WaitGroup) {
+		go func(index int, file fs.DirEntry, pathRootDir string, wg *sync.WaitGroup) {
 			defer wg.Done()
 
 			flInfo, err := getFileInfo(pathRootDir, file)
@@ -151,7 +155,7 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 			}
 
 			fileInfoSlice[index] = flInfo
-		}(index, file, &wg)
+		}(index, file, pathRootDir, &wg)
 
 		wg.Wait()
 	}
@@ -195,15 +199,15 @@ func getSizeFilesRecursion(pathDir string) (int64, error) {
 		size += info.Size()
 		return nil
 	})
-
 	if err != nil {
 		return 0, fmt.Errorf("не удалось пройтись по дериктории: %s", err)
 	}
+
 	return size, nil
 }
 
 // sortFileInfo - сортирует срез типа fileInfo
-func sortFileInfo(fileInfoSlice []fileInfo, sortFlag string) {
+func sortFilesInfo(fileInfoSlice []fileInfo, sortFlag string) {
 	sort.Slice(fileInfoSlice, func(i, j int) bool {
 		if sortFlag == "desc" {
 			return fileInfoSlice[i].Size > fileInfoSlice[j].Size
@@ -212,8 +216,9 @@ func sortFileInfo(fileInfoSlice []fileInfo, sortFlag string) {
 	})
 }
 
-func convertToFileInfoResponse(fileInfoSlice []fileInfo) []fileInfoResponse {
-	fileInfoResponseSlice := make([]fileInfoResponse, len(fileInfoSlice))
+// convertToFileInfoReponse - конвертирует fileInfo в fileInfoResponse
+func convertToFilesInfoResponse(fileInfoSlice []fileInfo) []fileInfoResponse {
+	filesInfoResponse := make([]fileInfoResponse, len(fileInfoSlice))
 
 	for index, fl := range fileInfoSlice {
 		fileType := fl.Type
@@ -222,10 +227,10 @@ func convertToFileInfoResponse(fileInfoSlice []fileInfo) []fileInfoResponse {
 
 		fileInfoResponseTmp := fileInfoResponse{Type: fileType, Name: fileName, Size: fileSize}
 
-		fileInfoResponseSlice[index] = fileInfoResponseTmp
+		filesInfoResponse[index] = fileInfoResponseTmp
 	}
 
-	return fileInfoResponseSlice
+	return filesInfoResponse
 }
 
 // convertToOptimalUnit - возврает преобразованные байты в оптимальные единицы измерения
