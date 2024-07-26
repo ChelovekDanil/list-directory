@@ -1,13 +1,25 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
+	"io/fs"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
-	"time"
+	"sync"
+
+	"github.com/joho/godotenv"
 )
+
+// fileInfoResponse - представляет собой структу ответа
+type fileInfoResponse struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
+	Size string `json:"size"`
+}
 
 // fileInfo - представляет собой параметры файла
 type fileInfo struct {
@@ -17,58 +29,87 @@ type fileInfo struct {
 }
 
 func main() {
-	start := time.Now()
+	http.HandleFunc("/fs", fsHandler)
 
-	rootFlagPtr, sortFlagPtr, err := addFlag()
+	currentDir, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("ошибка при чтении текущей деректории: %s", err)
 	}
 
-	fileInfoSlice, err := getFileInfoSlice(*rootFlagPtr)
+	err = godotenv.Load(fmt.Sprintf("%s/%s", currentDir, ".ENV"))
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("ошибка при загрузке .env файла: %s", err)
 	}
 
-	sortFileInfo(fileInfoSlice, *sortFlagPtr)
-	printFileInfo(fileInfoSlice)
+	port := os.Getenv("SERVER_PORT")
 
-	timeFinish := time.Since(start)
-	fmt.Printf("\nВремя завершение программы: %s\n", fmt.Sprintf("%d.%dms", timeFinish.Milliseconds(), timeFinish.Microseconds()/10000))
+	fmt.Println("сервер стартовал на порту 8080")
+	err = http.ListenAndServe(port, nil)
+	if err != nil {
+		log.Fatalf("ошибка при запуске сервера: %s", err)
+	}
 }
 
-// addFlag - добавляет флаги
-func addFlag() (*string, *string, error) {
+// fsHandler - функция, которая будет обрабатывать url /fs
+func fsHandler(w http.ResponseWriter, r *http.Request) {
+	queryValues := r.URL.Query()
+	pathRoot := queryValues.Get("root")
+	sortFlag := queryValues.Get("sort")
+
+	resultFileInfo, err := getResultFileInfo(pathRoot, sortFlag)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resultFileInfo)
+}
+
+// getResultFileInfo - возвращает готовый срез структур
+func getResultFileInfo(pathRoot string, sortFlag string) ([]fileInfoResponse, error) {
+	err := checkArguments(&pathRoot, &sortFlag)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при чтении агрументов: %s", err)
+	}
+
+	fileInfoSlice, err := getFileInfoSlice(pathRoot)
+	if err != nil {
+		fmt.Println(err)
+		return nil, fmt.Errorf("ошибка при считывании файлов из деректории: %s", err)
+	}
+
+	sortFileInfo(fileInfoSlice, sortFlag)
+	fileInfoResponseSlice := convertToFileInfoResponse(fileInfoSlice)
+
+	return fileInfoResponseSlice, nil
+}
+
+// checkArguments - проверяет коректность введенных аргументов запроса
+func checkArguments(pathRoot *string, sortFlag *string) error {
 	defaultSortFlag := "asc"
 
-	rootFlagPtr := flag.String("root", "", "путь к каталогу с файлами")
-	sortFlagPtr := flag.String("sort", "", "сортировка (desc, asc)")
-
-	flag.Parse()
-
-	if *rootFlagPtr == "" || *sortFlagPtr == "" {
-		flag.PrintDefaults()
-	} else if *sortFlagPtr != "asc" && *sortFlagPtr != "desc" {
-		flag.PrintDefaults()
-		return nil, nil, fmt.Errorf("неверно заданы флаги")
-	}
-
-	if *rootFlagPtr == "" {
+	if *pathRoot == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {
-			return nil, nil, fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
+			return fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
-		rootFlagPtr = &currentDir
-		fmt.Printf("Должен быть установлен флаг --root, который отвечает за путь к каталогу\n.Значение по умолчанию: %s\n\n", currentDir)
+		*pathRoot = currentDir
 	}
 
-	if *sortFlagPtr == "" {
-		sortFlagPtr = &defaultSortFlag
-		fmt.Printf("Должен быть установлен флаг --sort, который отвечает за сортировка (asc, desc)\n.Значение по умолчанию asc\n\n")
+	if *sortFlag == "" {
+		*sortFlag = defaultSortFlag
+		return nil
 	}
 
-	return rootFlagPtr, sortFlagPtr, nil
+	if *sortFlag != "asc" && *sortFlag != "desc" {
+		return fmt.Errorf("неверно указаны агрументы")
+	}
+
+	return nil
 }
 
 // getFileInfoSlice - возвращает срез типа fileInfo из определенной директории
@@ -85,23 +126,34 @@ func getFileInfoSlice(pathRootDir string) ([]fileInfo, error) {
 	}
 
 	fileInfoSlice := make([]fileInfo, len(filesInRootDir))
+	var wg sync.WaitGroup
 
 	// заполнения среза fileInfoSlice информацией о файла в директории
 	for index, file := range filesInRootDir {
-		flInfo, err := getFileInfo(pathRootDir, file)
-		if err != nil {
-			fmt.Println(err)
+		wg.Add(1)
 
-			fileType := "Файл"
-			fileName := file.Name()
-			fileSize := 4000
+		go func(index int, file fs.DirEntry, wg *sync.WaitGroup) {
+			defer wg.Done()
 
-			if file.IsDir() {
-				fileType = "Дир"
+			flInfo, err := getFileInfo(pathRootDir, file)
+			if err != nil {
+				fmt.Println(err)
+
+				fileType := "Файл"
+				fileName := file.Name()
+				fileSize := int64(4096)
+
+				if file.IsDir() {
+					fileType = "Дир"
+				}
+
+				flInfo = fileInfo{Type: fileType, Name: fileName, Size: fileSize}
 			}
-			flInfo = fileInfo{Type: fileType, Name: fileName, Size: int64(fileSize)}
-		}
-		fileInfoSlice[index] = flInfo
+
+			fileInfoSlice[index] = flInfo
+		}(index, file, &wg)
+
+		wg.Wait()
 	}
 
 	return fileInfoSlice, nil
@@ -115,12 +167,13 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 	}
 
 	fileType := "Файл"
-	fileSize := fileDirInfo.Size()
 	fileName := fileDirInfo.Name()
+	fileSize := fileDirInfo.Size()
 
 	if fileDirInfo.IsDir() {
 		fileType = "Дир"
 		fileSize, err = getSizeFilesRecursion(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
+
 		if err != nil {
 			return fileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
@@ -149,31 +202,30 @@ func getSizeFilesRecursion(pathDir string) (int64, error) {
 	return size, nil
 }
 
-// printFileInfo - выводит информацию из среза типа fileInfo
-func printFileInfo(fileInfoSlice []fileInfo) {
-	biggestName := getBiggestNameInFileInfoSlice(fileInfoSlice)
-
-	fmt.Printf("%-6s %-*s %s\n", "Тип", biggestName+2, "Имя", "Размер")
-	for _, fileInfo := range fileInfoSlice {
-		if fileInfo.Name == "" || fileInfo.Size == 0 || fileInfo.Type == "" {
-			continue
+// sortFileInfo - сортирует срез типа fileInfo
+func sortFileInfo(fileInfoSlice []fileInfo, sortFlag string) {
+	sort.Slice(fileInfoSlice, func(i, j int) bool {
+		if sortFlag == "desc" {
+			return fileInfoSlice[i].Size > fileInfoSlice[j].Size
 		}
-		size := convertToOptimalSize(fileInfo.Size)
-		fmt.Printf("%-6s %-*s %s\n", fileInfo.Type, biggestName+2, fileInfo.Name, size)
-	}
+		return fileInfoSlice[i].Size < fileInfoSlice[j].Size
+	})
 }
 
-// getBiggestNameInFileInfoSlice - возвращает размер самого большого имени в срезе типа fileInfo
-func getBiggestNameInFileInfoSlice(fileInfoSlice []fileInfo) int {
-	biggestName := 0
+func convertToFileInfoResponse(fileInfoSlice []fileInfo) []fileInfoResponse {
+	fileInfoResponseSlice := make([]fileInfoResponse, len(fileInfoSlice))
 
-	for _, fileInfo := range fileInfoSlice {
-		if len(fileInfo.Name) > biggestName {
-			biggestName = len(fileInfo.Name)
-		}
+	for index, fl := range fileInfoSlice {
+		fileType := fl.Type
+		fileName := fl.Name
+		fileSize := convertToOptimalSize(fl.Size)
+
+		fileInfoResponseTmp := fileInfoResponse{Type: fileType, Name: fileName, Size: fileSize}
+
+		fileInfoResponseSlice[index] = fileInfoResponseTmp
 	}
 
-	return biggestName
+	return fileInfoResponseSlice
 }
 
 // convertToOptimalUnit - возврает преобразованные байты в оптимальные единицы измерения
@@ -200,14 +252,4 @@ func convertToOptimalSize(fileSize int64) string {
 	}
 
 	return fmt.Sprintf("%d bytes", fileSize)
-}
-
-// sortFileInfo - сортирует срез типа fileInfo
-func sortFileInfo(fileInfoSlice []fileInfo, sortFlag string) {
-	sort.Slice(fileInfoSlice, func(i, j int) bool {
-		if sortFlag == "desc" {
-			return fileInfoSlice[i].Size > fileInfoSlice[j].Size
-		}
-		return fileInfoSlice[i].Size < fileInfoSlice[j].Size
-	})
 }
