@@ -19,7 +19,7 @@ type fileInfo struct {
 }
 
 func main() {
-	start := time.Now()
+	timeStart := time.Now()
 
 	rootFlagPtr, sortFlagPtr, err := addFlag()
 	if err != nil {
@@ -36,7 +36,7 @@ func main() {
 	sortFilesInfo(filesInfo, sortFlagPtr)
 	printFilesInfo(filesInfo)
 
-	timeFinish := time.Since(start)
+	timeFinish := time.Since(timeStart)
 	fmt.Printf("\nВремя завершение программы: %s\n", fmt.Sprintf("%d.%dms", timeFinish.Milliseconds(), timeFinish.Microseconds()/10000))
 }
 
@@ -133,7 +133,7 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 
 	if fileDirInfo.IsDir() {
 		fileType = "Дир"
-		fileSize, err = getSizeFilesRecursion(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
+		fileSize, err = getSizeDirectory(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
 		if err != nil {
 			return fileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
@@ -143,8 +143,8 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 	return fileInfoRes, nil
 }
 
-// getSizeFilesRecursion - возвращяет размер каталога проходя по нему рекурсивно
-func getSizeFilesRecursion(pathDir string) (int64, error) {
+// getSizeDirectory - возвращяет размер каталога проходя по нему рекурсивно
+func getSizeDirectory(pathDir string) (int64, error) {
 	var size int64
 
 	err := filepath.Walk(pathDir, func(pathFile string, info os.FileInfo, err error) error {
@@ -174,29 +174,29 @@ func sortFilesInfo(filesInfo []fileInfo, sortFlag string) {
 
 // printFilesInfo - выводит информацию из среза типа fileInfo
 func printFilesInfo(filesInfo []fileInfo) {
-	biggestName := getLengthLargestNameInFilesInfo(filesInfo)
+	lengthLargestName := getLengthLargestNameInFilesInfo(filesInfo)
 
-	fmt.Printf("%-6s %-*s %s\n", "Тип", biggestName+2, "Имя", "Размер")
+	fmt.Printf("%-6s %-*s %s\n", "Тип", lengthLargestName+2, "Имя", "Размер")
 	for _, fileInfo := range filesInfo {
 		if fileInfo.Name == "" || fileInfo.Size == 0 || fileInfo.Type == "" {
 			continue
 		}
 		size := convertToOptimalSize(fileInfo.Size)
-		fmt.Printf("%-6s %-*s %s\n", fileInfo.Type, biggestName+2, fileInfo.Name, size)
+		fmt.Printf("%-6s %-*s %s\n", fileInfo.Type, lengthLargestName+2, fileInfo.Name, size)
 	}
 }
 
 // getLengthLargestNameInFilesInfo - возвращает размер самого большого имени в срезе типа fileInfo
 func getLengthLargestNameInFilesInfo(filesInfo []fileInfo) int {
-	biggestName := 0
+	lengthLargestName := 0
 
 	for _, fileInfo := range filesInfo {
-		if len(fileInfo.Name) > biggestName {
-			biggestName = len(fileInfo.Name)
+		if len(fileInfo.Name) > lengthLargestName {
+			lengthLargestName = len(fileInfo.Name)
 		}
 	}
 
-	return biggestName
+	return lengthLargestName
 }
 
 // convertToOptimalSize - возврает преобразованные байты в оптимальные единицы измерения
