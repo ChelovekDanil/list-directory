@@ -59,7 +59,6 @@ func addFlag() (*string, *string, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
 		}
-		currentDir = "/"
 		rootFlagPtr = &currentDir
 		fmt.Printf("Должен быть установлен флаг --root, который отвечает за путь к каталогу\n.Значение по умолчанию: %s\n\n", currentDir)
 	}
