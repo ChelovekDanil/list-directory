@@ -1,7 +1,5 @@
 *.bin
 *.exe
-*.o
-./*
-*.sh
-*.out
-/*
+list-directory
+!config
+
