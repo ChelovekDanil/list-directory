@@ -1,0 +1,66 @@
+body {
+    background-color: black;
+    color: white;
+    font-family: "Roboto", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+.buttons-block {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 50px;
+}
+
+.button {
+    background-color: white;
+    font-size: 20px;
+    height: 35px;
+    width: 200px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+}
+
+#current-path {
+    font-size: 30px;
+    height: 35px;
+    margin: 0;
+}
+
+.button:hover {
+    outline-offset: 2px;
+    outline: solid 2px white;
+    transition: 0.05s;
+}
+
+.button:active {
+    outline: none;
+}
+
+.table-block {
+	width: 100%;
+	border: 1px solid white;
+	border-collapse: collapse; 
+}
+
+.table-block th {
+	font-weight: bold;
+	padding: 5px;
+	border: 1px solid white;
+}
+
+.table-block td {
+	border: 1px solid white;
+	padding: 5px;       
+}
+
+.table-block .directory:hover {
+    background-color: white;
+    color: black;
+    transition: 0.05s;
+}
+
+.table-block tr:focus {
+    background-color: red;
+}
