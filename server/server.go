@@ -1,16 +1,15 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"list-directory/config"
 	filesystem "list-directory/fileSystem"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -28,7 +27,7 @@ func Start(ctx context.Context) error {
 		return fmt.Errorf("ошибка при чтении текущей деректории: %s", err)
 	}
 
-	port, err := getEnvValue(currentDir+"/config/.env", "SERVER_PORT")
+	port, err := config.GetEnvValue(currentDir+"/config/.env", "SERVER_PORT")
 	if err != nil {
 		return fmt.Errorf("ошибка при чтении env: %s", err)
 	}
@@ -63,35 +62,7 @@ func Start(ctx context.Context) error {
 
 	log.Printf("сервер завершился коректно")
 
-	if err == http.ErrServerClosed {
-		return nil
-	}
-
 	return nil
-}
-
-// getEnvValue возвращает значение по ключу из .env файла
-func getEnvValue(envFilePath, key string) (string, error) {
-	file, err := os.Open(envFilePath)
-	if err != nil {
-		return "", fmt.Errorf("ошибка открытия файла: %w", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 && strings.TrimSpace(parts[0]) == key {
-			return strings.TrimSpace(parts[1]), nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("ошибка сканирования файла: %w", err)
-	}
-
-	return "", fmt.Errorf("ключ '%s' не найден в файле '%s'", key, envFilePath)
 }
 
 // fsHandler - функция, которая будет обрабатывать url путь /fs

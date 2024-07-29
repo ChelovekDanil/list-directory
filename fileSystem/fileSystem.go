@@ -1,4 +1,4 @@
-package filesystem
+package fileSystem
 
 import (
 	"fmt"
@@ -13,16 +13,19 @@ import (
 type fileInfo struct {
 	Type        string `json:"type"`          // Тип файла (файл или деректория)
 	Name        string `json:"name"`          // Название файла
-	SizeInUnit  string `json:"size-in-unit"`  // Размер файла в единице измерения
-	SizeInBytes int64  `json:"size-in-bytes"` // Размер файла в байтах
+	SizeInUnit  string `json:"size_in_unit"`  // Размер файла в единице измерения
+	SizeInBytes int64  `json:"size_in_bytes"` // Размер файла в байтах
 }
 
 const (
-	bytes    = 1000
-	kiloByte = bytes
-	megaByte = bytes * kiloByte
-	gigaByte = bytes * megaByte
-	teraByte = bytes * gigaByte
+	defaultSortDescFlag       = "desc"
+	defaultSizeDirectoryBytes = int64(4096)
+	defaultSizeDirectoryUnit  = "4.10 kb"
+	bytes                     = 1000
+	kiloByte                  = bytes
+	megaByte                  = bytes * kiloByte
+	gigaByte                  = bytes * megaByte
+	teraByte                  = bytes * gigaByte
 )
 
 // GetFilesInfo - возвращает срез типа fileInfo из определенной директории
@@ -54,8 +57,8 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]fileInfo, error) {
 
 				fileType := "Файл"
 				fileName := file.Name()
-				fileSizeInUnit := "4.10 kb"
-				fileSizeInBytes := int64(4096)
+				fileSizeInUnit := defaultSizeDirectoryUnit
+				fileSizeInBytes := defaultSizeDirectoryBytes
 
 				if file.IsDir() {
 					fileType = "Дир"
@@ -122,7 +125,7 @@ func getSizeDirectory(pathDir string) (int64, error) {
 // sortFilesInfo - сортирует срез типа fileInfo
 func sortFilesInfo(filesInfo []fileInfo, sortFlag string) {
 	sort.Slice(filesInfo, func(i, j int) bool {
-		if sortFlag == "desc" {
+		if sortFlag == defaultSortDescFlag {
 			return filesInfo[i].SizeInBytes > filesInfo[j].SizeInBytes
 		}
 		return filesInfo[i].SizeInBytes < filesInfo[j].SizeInBytes
