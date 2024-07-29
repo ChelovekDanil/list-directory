@@ -3,13 +3,14 @@ body {
     color: white;
     font-family: "Roboto", sans-serif;
     font-weight: 400;
-    font-style: normal;
 }
 
 .buttons-block {
+    /* распологает элементы по горизонтали */
     display: flex;
+    /* выравнивание элементов по оси */
     justify-content: space-between;
-    margin-bottom: 50px;
+    padding-bottom: 50px;
 }
 
 .button {
@@ -29,6 +30,7 @@ body {
 }
 
 .button:hover {
+    /* распояние между обводкой и краем элемента */
     outline-offset: 2px;
     outline: solid 2px white;
     transition: 0.05s;
@@ -41,6 +43,7 @@ body {
 .table-block {
 	width: 100%;
 	border: 1px solid white;
+    /* означает что ячейки таблицы будут иметь общие границы */
 	border-collapse: collapse; 
 }
 
@@ -48,7 +51,7 @@ body {
 	font-weight: bold;
 	padding: 5px;
 	border: 1px solid white;
-}
+}   
 
 .table-block td {
 	border: 1px solid white;
@@ -59,8 +62,4 @@ body {
     background-color: white;
     color: black;
     transition: 0.05s;
-}
-
-.table-block tr:focus {
-    background-color: red;
 }
