@@ -9,8 +9,8 @@ import (
 	"sync"
 )
 
-// fileInfo - представляет собой параметры файла
-type fileInfo struct {
+// FileInfo - представляет собой параметры файла
+type FileInfo struct {
 	Type        string `json:"type"`          // Тип файла (файл или деректория)
 	Name        string `json:"name"`          // Название файла
 	SizeInUnit  string `json:"size_in_unit"`  // Размер файла в единице измерения
@@ -29,7 +29,7 @@ const (
 )
 
 // GetFilesInfo - возвращает срез типа fileInfo из определенной директории
-func GetFilesInfo(pathRootDir string, sortFlag string) ([]fileInfo, error) {
+func GetFilesInfo(pathRootDir string, sortFlag string) ([]FileInfo, error) {
 	rootDir, err := os.Open(pathRootDir)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии деректории: %s", err)
@@ -41,7 +41,7 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]fileInfo, error) {
 		return nil, fmt.Errorf("ошибка при чтении файлов в деректории: %s", err)
 	}
 
-	filesInfo := make([]fileInfo, len(filesInRootDir))
+	filesInfo := make([]FileInfo, len(filesInRootDir))
 	var wg sync.WaitGroup
 
 	// заполнения среза fileInfoSlice информацией о файлах в директории
@@ -64,7 +64,7 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]fileInfo, error) {
 					fileType = "Дир"
 				}
 
-				flInfo = fileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
+				flInfo = FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
 			}
 
 			filesInfo[index] = flInfo
@@ -79,10 +79,10 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]fileInfo, error) {
 }
 
 // getFileInfo - возвращает информацию о файле
-func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
+func getFileInfo(pathRootDir string, file os.DirEntry) (FileInfo, error) {
 	fileDirInfo, err := file.Info()
 	if err != nil {
-		return fileInfo{}, fmt.Errorf("ошибка при чтении информации о файле: %s", err)
+		return FileInfo{}, fmt.Errorf("ошибка при чтении информации о файле: %s", err)
 	}
 
 	fileType := "Файл"
@@ -94,12 +94,12 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (fileInfo, error) {
 		fileSizeInBytes, err = getSizeDirectory(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
 
 		if err != nil {
-			return fileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
+			return FileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
 	}
 	fileSizeInUnit := convertToOptimalSize(fileSizeInBytes)
 
-	fileInfoRes := fileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
+	fileInfoRes := FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
 	return fileInfoRes, nil
 }
 
@@ -123,7 +123,7 @@ func getSizeDirectory(pathDir string) (int64, error) {
 }
 
 // sortFilesInfo - сортирует срез типа fileInfo
-func sortFilesInfo(filesInfo []fileInfo, sortFlag string) {
+func sortFilesInfo(filesInfo []FileInfo, sortFlag string) {
 	sort.Slice(filesInfo, func(i, j int) bool {
 		if sortFlag == defaultSortDescFlag {
 			return filesInfo[i].SizeInBytes > filesInfo[j].SizeInBytes

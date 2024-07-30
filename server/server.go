@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"list-directory/config"
-	filesystem "list-directory/fileSystem"
+	"list-directory/fileSystem"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,8 +13,12 @@ import (
 	"time"
 )
 
-type rootReponse struct {
-	Root string `json:"root"`
+// fsResponse - струкрута отвера на запрос к fs
+type fsResponse struct {
+	ErrorCode    int                   `json:"error_code"`    // 0 если есть ошибки, 1 если ошибок нет
+	ErrorMessage string                `json:"error_message"` // сообщение ошибки
+	Data         []fileSystem.FileInfo `json:"data"`          // информация о файлах
+	Root         string                `json:"root"`          // корневая директория
 }
 
 const (
@@ -27,7 +31,6 @@ const (
 func Start(ctx context.Context) error {
 	serverMux := http.NewServeMux()
 	serverMux.Handle("/fs", http.HandlerFunc(fsHandler))
-	serverMux.Handle("/getRoot", http.HandlerFunc(getRootHandler))
 	serverMux.Handle("/", http.FileServer(http.Dir("client")))
 
 	port, err := config.GetEnvValue("SERVER_PORT")
@@ -68,46 +71,69 @@ func Start(ctx context.Context) error {
 	return nil
 }
 
-// getRootHandler - возвращает root в виде json
-func getRootHandler(w http.ResponseWriter, r *http.Request) {
-	root, err := config.GetEnvValue(rootEnv)
-	if err != nil {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "%s", err)
-		return
-	}
-
-	response := rootReponse{Root: root}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
 // fsHandler - возвращает информацию о файлах в виде json
 func fsHandler(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 
-	pathRoot, sortFlag, err := checkArgumentsInQuary(queryValues)
+	root, err := config.GetEnvValue("ROOT")
 	if err != nil {
+		response := fsResponse{
+			ErrorCode:    1,
+			ErrorMessage: err.Error(),
+			Data:         []fileSystem.FileInfo{},
+			Root:         root,
+		}
+
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "%s", err)
+
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	resultFileInfo, err := filesystem.GetFilesInfo(pathRoot, sortFlag)
+	pathRoot, sortFlag, err := checkArgumentsInQuary(queryValues)
 	if err != nil {
+		response := fsResponse{
+			ErrorCode:    1,
+			ErrorMessage: err.Error(),
+			Data:         []fileSystem.FileInfo{},
+			Root:         root,
+		}
+
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "%s", err)
+
+		json.NewEncoder(w).Encode(response)
 		return
+	}
+
+	filesInfo, err := fileSystem.GetFilesInfo(pathRoot, sortFlag)
+	if err != nil {
+		response := fsResponse{
+			ErrorCode:    1,
+			ErrorMessage: err.Error(),
+			Data:         []fileSystem.FileInfo{},
+			Root:         root,
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response := fsResponse{
+		ErrorCode:    0,
+		ErrorMessage: "",
+		Data:         filesInfo,
+		Root:         root,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resultFileInfo)
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // checkArgumentsInQuary - проверяет коректность введенных аргументов запроса

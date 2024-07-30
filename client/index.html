@@ -12,10 +12,12 @@
 <body>
     <div class="buttons-block">
         <button id="button-root" class="button">назад</button>
-        <p id="current-root"> </p>
-        <button id="button-sort" class="button">asc</button>
+            <div id="root">
+                <p id="current-root">/</p>    
+            </div>
+        <button id="button-sort" class="button">по убыванию</button>
     </div>
-    <table class="table-block">
+    <table class="table-block" id="table">
         <thead>
             <tr>
                 <th>Тип</th>
@@ -26,6 +28,6 @@
         <tbody>
         </tbody>
     </table>
-    <script src="scripts.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
