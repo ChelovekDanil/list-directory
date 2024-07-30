@@ -13,21 +13,24 @@ import (
 	"time"
 )
 
+type rootReponse struct {
+	Root string `json:"root"`
+}
+
 const (
 	defaultSortFlag = "asc"
+	serverPortEnv   = "SERVER_PORT"
+	rootEnv         = "ROOT"
 )
 
 // Start - запускает сервер
 func Start(ctx context.Context) error {
 	serverMux := http.NewServeMux()
 	serverMux.Handle("/fs", http.HandlerFunc(fsHandler))
+	serverMux.Handle("/getRoot", http.HandlerFunc(getRootHandler))
+	serverMux.Handle("/", http.FileServer(http.Dir("client")))
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("ошибка при чтении текущей деректории: %s", err)
-	}
-
-	port, err := config.GetEnvValue(currentDir+"/config/.env", "SERVER_PORT")
+	port, err := config.GetEnvValue("SERVER_PORT")
 	if err != nil {
 		return fmt.Errorf("ошибка при чтении env: %s", err)
 	}
@@ -65,7 +68,24 @@ func Start(ctx context.Context) error {
 	return nil
 }
 
-// fsHandler - функция, которая будет обрабатывать url путь /fs
+// getRootHandler - возвращает root в виде json
+func getRootHandler(w http.ResponseWriter, r *http.Request) {
+	root, err := config.GetEnvValue(rootEnv)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+
+	response := rootReponse{Root: root}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// fsHandler - возвращает информацию о файлах в виде json
 func fsHandler(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 
@@ -85,7 +105,7 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resultFileInfo)
 }

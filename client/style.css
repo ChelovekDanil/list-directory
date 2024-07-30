@@ -23,7 +23,7 @@ body {
     outline: none;
 }
 
-#current-path {
+#current-root {
     font-size: 30px;
     height: 35px;
     margin: 0;
@@ -55,7 +55,7 @@ body {
 
 .table-block td {
 	border: 1px solid white;
-	padding: 5px;       
+	padding: 5px; 
 }
 
 .table-block .directory:hover {

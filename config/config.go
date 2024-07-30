@@ -8,7 +8,14 @@ import (
 )
 
 // GetEnvValue возвращает значение по ключу из .env файла
-func GetEnvValue(envFilePath, key string) (string, error) {
+func GetEnvValue(key string) (string, error) {
+	envFilePath, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("ошибка при чтении текущей деректории: %s", err)
+	}
+
+	envFilePath += "/config/.env"
+
 	file, err := os.Open(envFilePath)
 	if err != nil {
 		return "", fmt.Errorf("ошибка открытия файла: %w", err)
