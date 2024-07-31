@@ -17,6 +17,7 @@ const getFilesInfo = async () => {
             setRoot(data.root);
         }
         result = data.data;
+        return result;
     });
 
     return result;

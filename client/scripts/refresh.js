@@ -1,4 +1,4 @@
-import { root, setRoot } from "./buttons.js";
+import { backRoot, root, setRoot } from "./buttons.js";
 import { getFilesInfo } from "./fileInfo.js";
 import { freeze } from "./ui.js";
 
@@ -12,6 +12,12 @@ const refreshTable = async () => {
     freeze(true);
 
     const filesInfo = await getFilesInfo();
+    if (Object.keys(filesInfo).length < 1) {
+        freeze(false);
+        backRoot();
+        return;
+    }
+
     const tableBody = table.querySelector("tbody");
 
     tableBody.remove();
