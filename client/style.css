@@ -11,9 +11,11 @@ body {
     border-radius: 50%;
     width: 20px;
     height: 20px;
+    /* подключание анимацию spin, которая длится 2 секунды линейно и бесконечно */
     animation: spin 2s linear infinite;
   }
   
+/* анимация loader-а */
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
