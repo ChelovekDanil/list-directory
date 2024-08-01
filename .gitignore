@@ -1,4 +1,7 @@
-*.bin
-*.exe
-list-directory
 !config
+!.json
+
+list-directory
+node_modules
+dist
+

@@ -31,7 +31,7 @@ const (
 func Start(ctx context.Context) error {
 	serverMux := http.NewServeMux()
 	serverMux.Handle("/fs", http.HandlerFunc(fsHandler))
-	serverMux.Handle("/", http.FileServer(http.Dir("../client")))
+	serverMux.Handle("/", http.FileServer(http.Dir("../client/dist")))
 
 	port, err := config.GetEnvValue("SERVER_PORT")
 	if err != nil {
