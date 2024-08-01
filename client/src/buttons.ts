@@ -12,6 +12,7 @@ const descSort: string = "desc";
 // Возврат к предыдущему пути
 const backRoot = () => {
     if (root === "/") {
+        alert("Это конечная директория");
         return;
     }
 

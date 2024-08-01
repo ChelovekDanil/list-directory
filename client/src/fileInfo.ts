@@ -29,9 +29,9 @@ class FileInfo {
 }
 
 // Получение информации о файлах
-const getFilesInfo = async (): Promise<FileInfo[]> => {
+const getFilesInfo = async (): Promise<Response> => {
     const urlRequest: string = `fs?root=${root}&sort=${sortFlag}`;
-    let result: FileInfo[] = [];
+    let result: Response = new Response(0, "", [], "");
 
     await fetch(urlRequest)
     .then((response) => {
@@ -44,8 +44,7 @@ const getFilesInfo = async (): Promise<FileInfo[]> => {
         if (root === "") {
             setRoot(data.root);
         }
-        result = data.data;
-        return result;
+        result = data;
     });
 
     return result;

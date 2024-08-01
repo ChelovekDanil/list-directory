@@ -1,6 +1,7 @@
 !config
 !.json
 
+package-lock.json
 list-directory
 node_modules
 dist

@@ -14,7 +14,7 @@ func GetEnvValue(key string) (string, error) {
 		return "", fmt.Errorf("ошибка при чтении текущей деректории: %s", err)
 	}
 
-	envFilePath += "/config/.env"
+	envFilePath += "/httpserver/config/.env"
 
 	file, err := os.Open(envFilePath)
 	if err != nil {

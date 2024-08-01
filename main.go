@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"list-directory/server"
+	"list-directory/httpserver/server"
 	"log"
 	"os"
 	"os/signal"

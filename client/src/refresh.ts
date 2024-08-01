@@ -1,18 +1,16 @@
 import { backRoot, root, setRoot } from "./buttons";
 import { FileInfo, getFilesInfo } from "./fileInfo";
-import { freeze } from "./ui";
+import { freeze, refreshing } from "./ui";
 
 const currentRootElement = document.getElementById("current-root") as HTMLParagraphElement;
 const table = document.getElementById("table") as HTMLTableElement;
-
-let refreshing: boolean = false;
 
 // Обновление таблицы
 const refreshTable = async () => {
     freeze(true);
 
-    const filesInfo: FileInfo[] = await getFilesInfo();
-    if (filesInfo.length < 1) {
+    const filesInfo = await getFilesInfo();
+    if (filesInfo.error_code === 1) {
         freeze(false);
         backRoot();
         return;
@@ -23,7 +21,7 @@ const refreshTable = async () => {
     tableBody!.remove();
 
     const newTableBody = document.createElement("tbody") as HTMLTableSectionElement;
-    filesInfo!.forEach(fileInfo => {
+    filesInfo!.data.forEach(fileInfo => {
         newTableBody.appendChild(createLine(fileInfo));
       });
 
@@ -66,9 +64,4 @@ const createLine = (fileInfo: FileInfo) => {
     return line;
 }
 
-// Изменяет значение у refreshing
-const setRefreshing = (newRefreshing: boolean) => {
-    refreshing = newRefreshing;
-}
-
-export {refreshTable, refreshing, setRefreshing, currentRootElement};
+export {refreshTable, currentRootElement};

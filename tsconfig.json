@@ -9,7 +9,7 @@
       "forceConsistentCasingInFileNames": true
     },
     "include": [
-      "src/**/*.ts"
+      "./client/src/**/*.ts"
     ],
     "exclude": ["node_modules"]
   }

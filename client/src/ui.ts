@@ -1,5 +1,6 @@
 import { buttonRoot, buttonSort } from "./buttons";
-import { setRefreshing } from "./refresh";
+
+let refreshing: boolean = false;
 
 // Замараживает кнопки и выводит loader
 const freeze = (isBlock: boolean) => {
@@ -10,12 +11,12 @@ const freeze = (isBlock: boolean) => {
         buttonRoot!.disabled = false;
         buttonSort!.disabled = false;
         
-        setRefreshing(false);
+        refreshing = false;
         return;
     }
     
     // блокировка
-    setRefreshing(true);
+    refreshing = true;
 
     buttonRoot.disabled = true;
     buttonSort.disabled = true;
@@ -28,4 +29,4 @@ const freeze = (isBlock: boolean) => {
     rootBlock!.insertBefore(loader, currentRoot);
 }
 
-export {freeze};
+export {freeze, refreshing};
