@@ -1,11 +1,9 @@
 import { backRoot, root, setRoot } from "./buttons.js";
 import { getFilesInfo } from "./fileInfo.js";
-import { freeze } from "./ui.js";
+import { freeze, refreshing } from "./ui.js";
 
 const currentRootElement = document.getElementById("current-root");
 const table = document.getElementById("table");
-
-let refreshing = false;
 
 // Обновление таблицы
 const refreshTable = async () => {
@@ -66,8 +64,4 @@ const createLine = (fileInfo) => {
     return line;
 }
 
-const setRefreshing = (newRefreshing) => {
-    refreshing = newRefreshing;
-}
-
-export {refreshTable, refreshing, setRefreshing, currentRootElement};
+export {refreshTable, currentRootElement};
