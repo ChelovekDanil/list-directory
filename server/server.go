@@ -142,11 +142,12 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	sortFlag := queryValues.Get("sort")
 
 	if pathRoot == "" {
-		currentDir, err := os.Getwd()
+		currentRoot, err := config.GetEnvValue("ROOT")
 		if err != nil {
-			return "", "", fmt.Errorf("ошибка при чтении корневого каталога: %s", err)
+			return "", "", fmt.Errorf("ошибка при чтении конфига файла, %s", err)
 		}
-		pathRoot = currentDir
+
+		pathRoot = currentRoot
 	}
 
 	if sortFlag == "" {
