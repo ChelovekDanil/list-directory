@@ -16,7 +16,7 @@ const getFilesInfo = async () => {
         if (root === "") {
             setRoot(data.root);
         }
-        result = data.data;
+        result = data;
         console.log(urlRequest);
     });
 

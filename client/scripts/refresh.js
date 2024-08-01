@@ -12,7 +12,7 @@ const refreshTable = async () => {
     freeze(true);
 
     const filesInfo = await getFilesInfo();
-    if (Object.keys(filesInfo).length < 1) {
+    if (filesInfo.error_code === 1) {
         freeze(false);
         backRoot();
         return;
@@ -23,7 +23,7 @@ const refreshTable = async () => {
     tableBody.remove();
 
     const newTableBody = document.createElement("tbody");
-    filesInfo.forEach(fileInfo => {
+    filesInfo.data.forEach(fileInfo => {
         newTableBody.appendChild(createLine(fileInfo));
     });
 
