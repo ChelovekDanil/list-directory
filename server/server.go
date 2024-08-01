@@ -22,9 +22,10 @@ type fsResponse struct {
 }
 
 const (
-	defaultSortFlag = "asc"
-	serverPortEnv   = "SERVER_PORT"
-	rootEnv         = "ROOT"
+	ascFlag       = "asc"
+	descFlag      = "desc"
+	serverPortEnv = "SERVER_PORT"
+	rootEnv       = "ROOT"
 )
 
 // Start - запускает сервер
@@ -33,7 +34,7 @@ func Start(ctx context.Context) error {
 	serverMux.Handle("/fs", http.HandlerFunc(fsHandler))
 	serverMux.Handle("/", http.FileServer(http.Dir("client")))
 
-	port, err := config.GetEnvValue("SERVER_PORT")
+	port, err := config.GetEnvValue(serverPortEnv)
 	if err != nil {
 		return fmt.Errorf("ошибка при чтении env: %s", err)
 	}
@@ -75,7 +76,7 @@ func Start(ctx context.Context) error {
 func fsHandler(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 
-	root, err := config.GetEnvValue("ROOT")
+	root, err := config.GetEnvValue(rootEnv)
 	if err != nil {
 		response := fsResponse{
 			ErrorCode:    1,
@@ -142,7 +143,7 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	sortFlag := queryValues.Get("sort")
 
 	if pathRoot == "" {
-		currentRoot, err := config.GetEnvValue("ROOT")
+		currentRoot, err := config.GetEnvValue(rootEnv)
 		if err != nil {
 			return "", "", fmt.Errorf("ошибка при чтении конфига файла, %s", err)
 		}
@@ -151,7 +152,7 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	}
 
 	if sortFlag == "" {
-		sortFlag = defaultSortFlag
+		sortFlag = ascFlag
 	}
 
 	_, err := os.Open(pathRoot)
@@ -159,7 +160,7 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 		return "", "", fmt.Errorf("директории: %s не сущестует: %s", pathRoot, err)
 	}
 
-	if sortFlag != "asc" && sortFlag != "desc" {
+	if sortFlag != ascFlag && sortFlag != descFlag {
 		return "", "", fmt.Errorf("неверно указан аргумент sort должен принимать asc или desc")
 	}
 

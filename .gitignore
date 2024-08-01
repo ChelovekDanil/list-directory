@@ -1,4 +1,5 @@
 *.bin
 *.exe
+*.lock
 list-directory
 !config
