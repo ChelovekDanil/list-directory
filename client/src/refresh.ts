@@ -4,13 +4,21 @@ import { freeze, refreshing } from "./ui";
 
 const currentRootElement = document.getElementById("current-root") as HTMLParagraphElement;
 const table = document.getElementById("table") as HTMLTableElement;
+const badErrorCode = 1;
+const dirClassName = "directory";
+const fileClassName = "file";
+const dirName = "Дир";
 
 // Обновление таблицы
 const refreshTable = async () => {
     freeze(true);
 
     const filesInfo = await getFilesInfo();
-    if (filesInfo.error_code === 1) {
+    if (filesInfo.error_code === badErrorCode && root === "") {
+        freeze(false);
+        return;
+    }
+    if (filesInfo.error_code === badErrorCode) {
         freeze(false);
         backRoot();
         return;
@@ -34,24 +42,24 @@ const refreshTable = async () => {
 const createLine = (fileInfo: FileInfo) => {
     const line = document.createElement("tr") as HTMLTableRowElement;
 
-    if (fileInfo.type === "Дир") {
-        line.classList.add("directory");
+    if (fileInfo.type === dirName) {
+        line.classList.add(dirClassName);
         line.addEventListener('click', () => {
             if (refreshing) {
                 return;
             }
 
-            setRoot(`${root}/${fileInfo.name}`);
+            setRoot(`${root}${root === "/" ? "" : "/"}${fileInfo.name}`);
             currentRootElement!.textContent = root;
             refreshTable();
         });
     } else {
-        line.classList.add("file");
+        line.classList.add(fileClassName);
     }
 
-    const columnType = document.createElement("th") as HTMLTableCellElement;
-    const columnName = document.createElement("th") as HTMLTableCellElement;
-    const columnSize = document.createElement("th") as HTMLTableCellElement;
+    const columnType = document.createElement("td") as HTMLTableCellElement;
+    const columnName = document.createElement("td") as HTMLTableCellElement;
+    const columnSize = document.createElement("td") as HTMLTableCellElement;
 
     columnType.innerText = fileInfo.type;
     columnName.innerText = fileInfo.name;

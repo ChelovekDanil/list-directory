@@ -11,12 +11,7 @@ const descSort: string = "desc";
 
 // Возврат к предыдущему пути
 const backRoot = () => {
-    if (root === "/") {
-        alert("Это конечная директория");
-        return;
-    }
-
-    const resultRoot: string = root.split('/').slice(0, -1).join('/');
+    const resultRoot = root.split('/').slice(0, -1).join('/');
 
     if (resultRoot === "") {
         root = "/";

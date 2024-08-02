@@ -21,11 +21,12 @@ const (
 	defaultSortDescFlag       = "desc"
 	defaultSizeDirectoryBytes = int64(4096)
 	defaultSizeDirectoryUnit  = "4.10 kb"
-	bytes                     = 1000
-	kiloByte                  = bytes
-	megaByte                  = bytes * kiloByte
-	gigaByte                  = bytes * megaByte
-	teraByte                  = bytes * gigaByte
+	dirName                   = "Дир"
+	fileName                  = "файл"
+	kiloByte                  = 1000
+	megaByte                  = kiloByte * kiloByte
+	gigaByte                  = kiloByte * megaByte
+	teraByte                  = kiloByte * gigaByte
 )
 
 // GetFilesInfo - возвращает срез типа fileInfo из определенной директории
@@ -55,23 +56,22 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]FileInfo, error) {
 			if err != nil {
 				fmt.Println(err)
 
-				fileType := "Файл"
+				fileType := fileName
 				fileName := file.Name()
 				fileSizeInUnit := defaultSizeDirectoryUnit
 				fileSizeInBytes := defaultSizeDirectoryBytes
 
 				if file.IsDir() {
-					fileType = "Дир"
+					fileType = dirName
 				}
 
-				flInfo = FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
+				flInfo = &FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
 			}
 
-			filesInfo[index] = flInfo
+			filesInfo[index] = *flInfo
 		}(index, file, pathRootDir, &wg)
-
-		wg.Wait()
 	}
+	wg.Wait()
 
 	sortFilesInfo(filesInfo, sortFlag)
 
@@ -79,33 +79,33 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]FileInfo, error) {
 }
 
 // getFileInfo - возвращает информацию о файле
-func getFileInfo(pathRootDir string, file os.DirEntry) (FileInfo, error) {
+func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 	fileDirInfo, err := file.Info()
 	if err != nil {
-		return FileInfo{}, fmt.Errorf("ошибка при чтении информации о файле: %s", err)
+		return nil, fmt.Errorf("ошибка при чтении информации о файле: %s", err)
 	}
 
-	fileType := "Файл"
+	fileType := fileName
 	fileName := fileDirInfo.Name()
 	fileSizeInBytes := fileDirInfo.Size()
 
 	if fileDirInfo.IsDir() {
-		fileType = "Дир"
+		fileType = dirName
 		fileSizeInBytes, err = getSizeDirectory(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
 
 		if err != nil {
-			return FileInfo{}, fmt.Errorf("ошибка при чтении файла: %s", err)
+			return nil, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
 	}
 	fileSizeInUnit := convertToOptimalSize(fileSizeInBytes)
 
 	fileInfoRes := FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
-	return fileInfoRes, nil
+	return &fileInfoRes, nil
 }
 
 // getSizeDirectory - возвращяет размер каталога проходя по нему рекурсивно
 func getSizeDirectory(pathDir string) (int64, error) {
-	var size int64
+	size := defaultSizeDirectoryBytes
 
 	err := filepath.Walk(pathDir, func(pathFile string, info os.FileInfo, err error) error {
 		if err != nil {

@@ -26,7 +26,7 @@ body {
     display: flex;
     /* выравнивание элементов по оси */
     justify-content: space-between;
-    padding-bottom: 50px;
+    padding-bottom: 10px;
 }
 
 .button {
@@ -35,6 +35,7 @@ body {
     height: 35px;
     width: 200px;
     border-radius: 8px;
+    cursor: pointer;
     border: none;
     outline: none;
 }
@@ -81,5 +82,26 @@ body {
 .table-block .directory:hover {
     background-color: white;
     color: black;
+    cursor: pointer;
     transition: 0.05s;
+}
+
+.table-block .file td {
+    background-color: blue;
+}
+
+#table-header {
+    background-color: green;
+}
+
+#table-header-type {
+    width: 100px;
+}
+
+#table-header-size {
+    width: 100px;
+}
+
+#header {
+    text-align: center;
 }

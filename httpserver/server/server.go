@@ -9,13 +9,12 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 )
 
-// fsResponse - струкрута отвера на запрос к fs
+// fsResponse - структура ответа на запрос к fs
 type fsResponse struct {
-	ErrorCode    int                   `json:"error_code"`    // 0 если есть ошибки, 1 если ошибок нет
+	ErrorCode    int                   `json:"error_code"`    // 1 если есть ошибки, 0 если ошибок нет
 	ErrorMessage string                `json:"error_message"` // сообщение ошибки
 	Data         []fileSystem.FileInfo `json:"data"`          // информация о файлах
 	Root         string                `json:"root"`          // корневая директория
@@ -26,6 +25,7 @@ const (
 	descFlag      = "desc"
 	serverPortEnv = "SERVER_PORT"
 	rootEnv       = "ROOT"
+	startPath     = "/"
 )
 
 // Start - запускает сервер
@@ -78,12 +78,7 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 
 	root, err := config.GetEnvValue(rootEnv)
 	if err != nil {
-		response := fsResponse{
-			ErrorCode:    1,
-			ErrorMessage: err.Error(),
-			Data:         []fileSystem.FileInfo{},
-			Root:         root,
-		}
+		response := createResponse(1, err.Error(), []fileSystem.FileInfo{}, root)
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
@@ -92,14 +87,9 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathRoot, sortFlag, err := checkArgumentsInQuary(queryValues)
+	pathRoot, sortFlag, err := readArgumentsInQuary(queryValues)
 	if err != nil {
-		response := fsResponse{
-			ErrorCode:    1,
-			ErrorMessage: err.Error(),
-			Data:         []fileSystem.FileInfo{},
-			Root:         root,
-		}
+		response := createResponse(1, err.Error(), []fileSystem.FileInfo{}, startPath)
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
@@ -110,12 +100,7 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 
 	filesInfo, err := fileSystem.GetFilesInfo(pathRoot, sortFlag)
 	if err != nil {
-		response := fsResponse{
-			ErrorCode:    1,
-			ErrorMessage: err.Error(),
-			Data:         []fileSystem.FileInfo{},
-			Root:         root,
-		}
+		response := createResponse(1, err.Error(), []fileSystem.FileInfo{}, root)
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
@@ -124,12 +109,7 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := fsResponse{
-		ErrorCode:    0,
-		ErrorMessage: "",
-		Data:         filesInfo,
-		Root:         root,
-	}
+	response := createResponse(0, "", filesInfo, root)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -137,13 +117,13 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// checkArgumentsInQuary - проверяет коректность введенных аргументов запроса
-func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
+// readArgumentsInQuary - проверяет коректность введенных аргументов запроса
+func readArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	pathRoot := queryValues.Get("root")
 	sortFlag := queryValues.Get("sort")
 
 	if pathRoot == "" {
-		currentRoot, err := config.GetEnvValue("ROOT")
+		currentRoot, err := config.GetEnvValue(rootEnv)
 		if err != nil {
 			return "", "", fmt.Errorf("ошибка при чтении конфига файла, %s", err)
 		}
@@ -155,14 +135,13 @@ func checkArgumentsInQuary(queryValues url.Values) (string, string, error) {
 		sortFlag = ascFlag
 	}
 
-	_, err := os.Open(pathRoot)
-	if err != nil {
-		return "", "", fmt.Errorf("директории: %s не сущестует: %s", pathRoot, err)
-	}
-
 	if sortFlag != ascFlag && sortFlag != descFlag {
 		return "", "", fmt.Errorf("неверно указан аргумент sort должен принимать asc или desc")
 	}
 
 	return pathRoot, sortFlag, nil
+}
+
+func createResponse(errorCode int, errorMessage string, data []fileSystem.FileInfo, root string) fsResponse {
+	return fsResponse{ErrorCode: errorCode, ErrorMessage: errorMessage, Data: data, Root: root}
 }
