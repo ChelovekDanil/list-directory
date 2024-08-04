@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"list-directory/httpserver/config"
 	"list-directory/httpserver/fileSystem"
+	"list-directory/httpserver/statistics"
 	"log"
 	"net/http"
 	"net/url"
@@ -21,11 +22,12 @@ type fsResponse struct {
 }
 
 const (
-	ascFlag       = "asc"
-	descFlag      = "desc"
-	serverPortEnv = "SERVER_PORT"
-	rootEnv       = "ROOT"
-	startPath     = "/"
+	ascFlag           = "asc"
+	descFlag          = "desc"
+	serverPortEnv     = "SERVER_PORT"
+	rootEnv           = "ROOT"
+	startPath         = "/"
+	timeCancelContext = 5
 )
 
 // Start - запускает сервер
@@ -57,7 +59,7 @@ func Start(ctx context.Context) error {
 
 	log.Printf("сервер остановлен")
 
-	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), timeCancelContext*time.Second)
 	defer func() {
 		cancel()
 	}()
@@ -74,46 +76,41 @@ func Start(ctx context.Context) error {
 
 // fsHandler - возвращает информацию о файлах в виде json
 func fsHandler(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+
 	queryValues := r.URL.Query()
 
 	root, err := config.GetEnvValue(rootEnv)
 	if err != nil {
-		response := createResponse(1, err.Error(), []fileSystem.FileInfo{}, root)
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-
+		response := createBadResponse(err.Error(), root, &w)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	pathRoot, sortFlag, err := readArgumentsInQuary(queryValues)
 	if err != nil {
-		response := createResponse(1, err.Error(), []fileSystem.FileInfo{}, startPath)
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-
+		response := createBadResponse(err.Error(), startPath, &w)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	filesInfo, err := fileSystem.GetFilesInfo(pathRoot, sortFlag)
 	if err != nil {
-		response := createResponse(1, err.Error(), []fileSystem.FileInfo{}, root)
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-
+		response := createBadResponse(err.Error(), root, &w)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	response := createResponse(0, "", filesInfo, root)
+	finishTime := fmt.Sprintf("%.5f", time.Since(startTime).Seconds())
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	err = statistics.SaveStatistics(finishTime, pathRoot, filesInfo)
+	if err != nil {
+		response := createBadResponse(err.Error(), root, &w)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
+	response := createGoodResponse(filesInfo, root, &w)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -142,6 +139,18 @@ func readArgumentsInQuary(queryValues url.Values) (string, string, error) {
 	return pathRoot, sortFlag, nil
 }
 
-func createResponse(errorCode int, errorMessage string, data []fileSystem.FileInfo, root string) fsResponse {
-	return fsResponse{ErrorCode: errorCode, ErrorMessage: errorMessage, Data: data, Root: root}
+// createBadResponse - создает ответ с ошибкой
+func createBadResponse(errorMessage string, root string, w *http.ResponseWriter) fsResponse {
+	(*w).Header().Set("Content-Type", "text/plain; charset=utf-8")
+	(*w).WriteHeader(http.StatusBadRequest)
+
+	return fsResponse{ErrorCode: 1, ErrorMessage: errorMessage, Data: []fileSystem.FileInfo{}, Root: root}
+}
+
+// createGoodResponse - создает хороший ответ
+func createGoodResponse(data []fileSystem.FileInfo, root string, w *http.ResponseWriter) fsResponse {
+	(*w).Header().Set("Content-Type", "application/json")
+	(*w).WriteHeader(http.StatusOK)
+
+	return fsResponse{ErrorCode: 0, ErrorMessage: "", Data: data, Root: root}
 }

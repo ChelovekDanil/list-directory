@@ -1,0 +1,77 @@
+body {
+    background-color: black;
+    color: white;
+    font-family: "Roboto", sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative; 
+    margin-top: 10px;
+    margin-bottom: 40px;
+}
+  
+.header a {
+    position: absolute;
+    text-align: center;
+    background-color: white;
+    color: black;
+    font-size: 20px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    width: 200px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    left: 0;
+}
+
+.header a:hover {
+    /* растояние между обводкой и краем элемента */
+    outline-offset: 2px;
+    outline: solid 2px white;
+    transition: 0.05s;
+}
+
+.header a:active {
+    outline: none;
+}
+
+.header h1 {
+    margin: 0; 
+}
+
+table {
+	width: 100%;
+	border: 1px solid white;
+    /* означает что ячейки таблицы будут иметь общие границы */
+	border-collapse: collapse; 
+}
+
+table th {
+	font-weight: bold;
+	padding: 5px;
+	border: 1px solid white;
+}   
+
+table td {
+	border: 1px solid white;
+	padding: 5px; 
+}
+
+.size {
+    text-align: center;
+    width: 100px;
+}
+
+.load_time {
+    text-align: center;
+    width: 100px;
+}
+
+.request_time {
+    text-align: center;
+    width: 200px;
+}

@@ -1,15 +1,15 @@
 {
-    "compilerOptions": {
-      "module": "commonjs",
-      "target": "es5",
-      "outDir": "dist",
-      "sourceMap": true,
-      "strict": true,
-      "esModuleInterop": true,
-      "forceConsistentCasingInFileNames": true
-    },
-    "include": [
-      "./client/src/**/*.ts"
-    ],
-    "exclude": ["node_modules"]
-  }
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es5",
+    "outDir": "dist",
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "client/ts/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

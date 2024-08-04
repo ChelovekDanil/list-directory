@@ -26,7 +26,6 @@ body {
     display: flex;
     /* выравнивание элементов по оси */
     justify-content: space-between;
-    padding-bottom: 10px;
 }
 
 .button {

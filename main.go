@@ -21,7 +21,8 @@ func main() {
 		cancel()
 	}()
 
-	if err := server.Start(ctx); err != nil {
+	err := server.Start(ctx)
+	if err != nil {
 		log.Printf("ошибка при запуске сервера:+%v\n", err)
 	}
 }
