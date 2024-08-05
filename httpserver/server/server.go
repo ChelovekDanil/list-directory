@@ -101,7 +101,7 @@ func fsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	finishTime := fmt.Sprintf("%.5f", time.Since(startTime).Seconds())
+	finishTime := time.Since(startTime).Seconds()
 
 	err = statistics.SaveStatistics(finishTime, pathRoot, filesInfo)
 	if err != nil {

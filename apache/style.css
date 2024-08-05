@@ -9,33 +9,30 @@ body {
     justify-content: center;
     align-items: center;
     position: relative; 
-    margin-top: 10px;
     margin-bottom: 40px;
 }
   
-.header a {
+.header button {
     position: absolute;
-    text-align: center;
     background-color: white;
-    color: black;
     font-size: 20px;
-    padding-top: 4px;
-    padding-bottom: 4px;
+    height: 35px;
     width: 200px;
     border-radius: 8px;
     cursor: pointer;
-    text-decoration: none;
+    border: none;
+    outline: none;
     left: 0;
 }
 
-.header a:hover {
+.header button:hover {
     /* растояние между обводкой и краем элемента */
     outline-offset: 2px;
     outline: solid 2px white;
     transition: 0.05s;
 }
 
-.header a:active {
+.header button:active {
     outline: none;
 }
 
@@ -43,7 +40,12 @@ body {
     margin: 0; 
 }
 
+#myChart {
+    height: 400px;
+}
+
 table {
+    margin-top: 40px;
 	width: 100%;
 	border: 1px solid white;
     /* означает что ячейки таблицы будут иметь общие границы */

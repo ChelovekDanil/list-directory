@@ -6,6 +6,7 @@ const buttonStatistics = document.getElementById("button-statistics") as HTMLBut
 
 const ascSort: string = "asc";
 const descSort: string = "desc";
+const urlApacheServer = "http://localhost:80/getStab.php";
 
 let sortFlag: string = "asc";
 let root: string = "";
@@ -48,7 +49,7 @@ const setSort = () => {
 
 // Открывает страницу cо статистикой
 const getStatistics = () => {
-    window.location.href = "http://localhost:80/getStab.php"
+    window.location.href = urlApacheServer;
 }
 
 // Для изменения значение root

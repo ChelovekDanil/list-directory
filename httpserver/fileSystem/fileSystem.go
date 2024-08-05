@@ -97,7 +97,7 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 			return nil, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
 	}
-	fileSizeInUnit := convertToOptimalSize(fileSizeInBytes)
+	fileSizeInUnit := ConvertToOptimalSize(fileSizeInBytes)
 
 	fileInfoRes := FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
 	return &fileInfoRes, nil
@@ -132,8 +132,8 @@ func sortFilesInfo(filesInfo []FileInfo, sortFlag string) {
 	})
 }
 
-// convertToOptimalSize - возврает преобразованные байты в оптимальные единицы измерения
-func convertToOptimalSize(fileSize int64) string {
+// ConvertToOptimalSize - возврает преобразованные байты в оптимальные единицы измерения
+func ConvertToOptimalSize(fileSize int64) string {
 	fileSizeFloat := float64(fileSize)
 
 	if fileSize > teraByte {
