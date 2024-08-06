@@ -130,7 +130,7 @@ function getJsonStatistics($statistics) {
     });
 
     $statistics = array_map(function($item) {
-        $item['size'] = ConvertToOptimalSize($item['size']);
+        $item['size'] = convertToOptimalSize($item['size']);
         return $item;
       }, $statistics);
 
@@ -144,7 +144,7 @@ function getStatistics() {
     try {
         $conn = connectToDb();
     } catch(Exception $e) {
-        throw new Exception("Error Processing Request" . $e->getMessage());
+        throw new Exception("Ошибка при попытке подключиться к базе данных" . $e->getMessage());
     }
     
     $sql_query = "SELECT path, size, load_time, request_time FROM statistics";
@@ -178,7 +178,7 @@ function createRowsForTable($statistics) {
                 <td class='request_time'>%s</td>
             </tr>",
             $row['path'],
-            ConvertToOptimalSize($row['size']),
+            convertToOptimalSize($row['size']),
             $row['load_time'],
             $row['request_time']
         );
@@ -188,7 +188,7 @@ function createRowsForTable($statistics) {
 }
 
 // Возврает преобразованные байты в оптимальные единицы измерения
-function ConvertToOptimalSize($bytes) {
+function convertToOptimalSize($bytes) {
     $kiloByte = 1000;
 	$megaByte = $kiloByte * $kiloByte;
 	$gigaByte = $kiloByte * $megaByte;

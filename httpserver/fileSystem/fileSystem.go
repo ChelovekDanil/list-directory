@@ -21,8 +21,8 @@ const (
 	defaultSortDescFlag       = "desc"
 	defaultSizeDirectoryBytes = int64(4096)
 	defaultSizeDirectoryUnit  = "4.10 kb"
-	dirName                   = "Дир"
-	fileName                  = "файл"
+	typeDir                   = "Дир"
+	typeFile                  = "файл"
 	kiloByte                  = 1000
 	megaByte                  = kiloByte * kiloByte
 	gigaByte                  = kiloByte * megaByte
@@ -56,13 +56,13 @@ func GetFilesInfo(pathRootDir string, sortFlag string) ([]FileInfo, error) {
 			if err != nil {
 				fmt.Println(err)
 
-				fileType := fileName
+				fileType := typeFile
 				fileName := file.Name()
 				fileSizeInUnit := defaultSizeDirectoryUnit
 				fileSizeInBytes := defaultSizeDirectoryBytes
 
 				if file.IsDir() {
-					fileType = dirName
+					fileType = typeDir
 				}
 
 				flInfo = &FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
@@ -85,19 +85,19 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 		return nil, fmt.Errorf("ошибка при чтении информации о файле: %s", err)
 	}
 
-	fileType := fileName
+	fileType := typeFile
 	fileName := fileDirInfo.Name()
 	fileSizeInBytes := fileDirInfo.Size()
 
 	if fileDirInfo.IsDir() {
-		fileType = dirName
+		fileType = typeDir
 		fileSizeInBytes, err = getSizeDirectory(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
 
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
 	}
-	fileSizeInUnit := ConvertToOptimalSize(fileSizeInBytes)
+	fileSizeInUnit := convertToOptimalSize(fileSizeInBytes)
 
 	fileInfoRes := FileInfo{Type: fileType, Name: fileName, SizeInUnit: fileSizeInUnit, SizeInBytes: fileSizeInBytes}
 	return &fileInfoRes, nil
@@ -105,7 +105,7 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 
 // getSizeDirectory - возвращяет размер каталога проходя по нему рекурсивно
 func getSizeDirectory(pathDir string) (int64, error) {
-	size := defaultSizeDirectoryBytes
+	var size int64
 
 	err := filepath.Walk(pathDir, func(pathFile string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -133,7 +133,7 @@ func sortFilesInfo(filesInfo []FileInfo, sortFlag string) {
 }
 
 // ConvertToOptimalSize - возврает преобразованные байты в оптимальные единицы измерения
-func ConvertToOptimalSize(fileSize int64) string {
+func convertToOptimalSize(fileSize int64) string {
 	fileSizeFloat := float64(fileSize)
 
 	if fileSize > teraByte {
