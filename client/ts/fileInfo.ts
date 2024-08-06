@@ -39,10 +39,7 @@ const getFilesInfo = async (): Promise<Response> => {
 
     await fetch(urlRequest)
     .then((response) => {
-        if (!response.ok) {
-            throw new Error(`Ошибка на сервере: ${response.status}`);
-        }
-        return response.json()
+        return response.json();
     })
     .then((data: Response) => {
         if (data.error_code === badErrorCode) {
@@ -53,9 +50,6 @@ const getFilesInfo = async (): Promise<Response> => {
         }
         result = data;
     })
-    .catch((error: Error) => {
-        alert(error);
-    });
 
     return result;
 }

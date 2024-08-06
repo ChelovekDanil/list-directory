@@ -3,6 +3,7 @@ package fileSystem
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -92,7 +93,6 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 	if fileDirInfo.IsDir() {
 		fileType = typeDir
 		fileSizeInBytes, err = getSizeDirectory(filepath.Join(pathRootDir, file.Name()))
-
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при чтении файла: %s", err)
 		}
@@ -106,17 +106,26 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 // getSizeDirectory - возвращяет размер каталога проходя по нему рекурсивно
 func getSizeDirectory(pathDir string) (int64, error) {
 	var size int64
-
-	err := filepath.Walk(pathDir, func(pathFile string, info os.FileInfo, err error) error {
+	err := filepath.Walk(pathDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("неудалось получить информацию о файле: %s", err)
+			log.Printf("Не удалось получить информацию о файле: %s", err)
+
+			return nil
 		}
 
-		size += info.Size()
+		if info.IsDir() {
+			size += defaultSizeDirectoryBytes
+		} else {
+			size += info.Size()
+		}
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("не удалось пройтись по дериктории: %s", err)
+		return defaultSizeDirectoryBytes, fmt.Errorf("не удалось вычислить размер директории: %s", err)
+	}
+	// Выставляем размер пустой директории по умолчанию
+	if size == 0 {
+		size = defaultSizeDirectoryBytes
 	}
 
 	return size, nil
