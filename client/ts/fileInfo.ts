@@ -33,14 +33,15 @@ class FileInfo {
 const badErrorCode = 1;
 
 // Получение информации о файлах
-const getFilesInfo = async (): Promise<Response> => {
-    console.log(root);
-    
+const getFilesInfo = async (): Promise<Response> => {    
     const urlRequest: string = `fs?root=${root}&sort=${sortFlag}`;
     let result: Response = new Response(0, "", [], "");
 
     await fetch(urlRequest)
     .then((response) => {
+        if (!response.ok) {
+            throw new Error(`Ошибка на сервере: ${response.status}`);
+        }
         return response.json()
     })
     .then((data: Response) => {
@@ -51,6 +52,9 @@ const getFilesInfo = async (): Promise<Response> => {
             setRoot(data.root);
         }
         result = data;
+    })
+    .catch((error: Error) => {
+        alert(error);
     });
 
     return result;

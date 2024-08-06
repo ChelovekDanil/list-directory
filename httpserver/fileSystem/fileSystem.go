@@ -20,7 +20,7 @@ type FileInfo struct {
 const (
 	defaultSortDescFlag       = "desc"
 	defaultSizeDirectoryBytes = int64(4096)
-	defaultSizeDirectoryUnit  = "4.10 kb"
+	defaultSizeDirectoryUnit  = "4.10 KB"
 	typeDir                   = "Дир"
 	typeFile                  = "файл"
 	kiloByte                  = 1000
@@ -33,13 +33,13 @@ const (
 func GetFilesInfo(pathRootDir string, sortFlag string) ([]FileInfo, error) {
 	rootDir, err := os.Open(pathRootDir)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при открытии деректории: %s", err)
+		return nil, fmt.Errorf("ошибка при открытии директории: %s", err)
 	}
 	defer rootDir.Close()
 
 	filesInRootDir, err := rootDir.ReadDir(-1)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при чтении файлов в деректории: %s", err)
+		return nil, fmt.Errorf("ошибка при чтении файлов в директории: %s", err)
 	}
 
 	filesInfo := make([]FileInfo, len(filesInRootDir))
@@ -91,7 +91,7 @@ func getFileInfo(pathRootDir string, file os.DirEntry) (*FileInfo, error) {
 
 	if fileDirInfo.IsDir() {
 		fileType = typeDir
-		fileSizeInBytes, err = getSizeDirectory(fmt.Sprintf("%s/%s", pathRootDir, file.Name()))
+		fileSizeInBytes, err = getSizeDirectory(filepath.Join(pathRootDir, file.Name()))
 
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при чтении файла: %s", err)
@@ -137,17 +137,17 @@ func convertToOptimalSize(fileSize int64) string {
 	fileSizeFloat := float64(fileSize)
 
 	if fileSize > teraByte {
-		return fmt.Sprintf("%0.2f tb", fileSizeFloat/teraByte)
+		return fmt.Sprintf("%0.2f TB", fileSizeFloat/teraByte)
 	}
 	if fileSize > gigaByte {
-		return fmt.Sprintf("%0.2f gb", fileSizeFloat/gigaByte)
+		return fmt.Sprintf("%0.2f GB", fileSizeFloat/gigaByte)
 	}
 	if fileSize > megaByte {
-		return fmt.Sprintf("%0.2f mb", fileSizeFloat/megaByte)
+		return fmt.Sprintf("%0.2f MB", fileSizeFloat/megaByte)
 	}
 	if fileSize > kiloByte {
-		return fmt.Sprintf("%0.2f kb", fileSizeFloat/kiloByte)
+		return fmt.Sprintf("%0.2f KB", fileSizeFloat/kiloByte)
 	}
 
-	return fmt.Sprintf("%d bytes", fileSize)
+	return fmt.Sprintf("%d Bytes", fileSize)
 }

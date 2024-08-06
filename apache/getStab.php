@@ -195,18 +195,18 @@ function convertToOptimalSize($bytes) {
 	$teraByte = $kiloByte * $gigaByte;
 
     if ($bytes > $teraByte) {
-		return sprintf("%0.2f tb", $bytes/$teraByte);
+		return sprintf("%0.2f TB", $bytes/$teraByte);
 	}
 	if ($bytes > $gigaByte) {
-		return sprintf("%0.2f gb", $bytes/$gigaByte);
+		return sprintf("%0.2f GB", $bytes/$gigaByte);
 	}
 	if ($bytes > $megaByte) {
-		return sprintf("%0.2f mb", $bytes/$megaByte);
+		return sprintf("%0.2f MB", $bytes/$megaByte);
 	}
 	if ($bytes > $kiloByte) {
-		return sprintf("%0.2f kb", $bytes/$kiloByte);
+		return sprintf("%0.2f KB", $bytes/$kiloByte);
 	}
 
-	return sprintf("%d bytes", $bytes);
+	return sprintf("%d Bytes", $bytes);
 }
 ?>

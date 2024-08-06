@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"time"
 )
 
@@ -27,14 +28,14 @@ const (
 	serverPortEnv     = "SERVER_PORT"
 	rootEnv           = "ROOT"
 	startPath         = "/"
-	timeCancelContext = 5
+	timeCancelContext = 5 * time.Second
 )
 
 // Start - запускает сервер
 func Start(ctx context.Context) error {
 	serverMux := http.NewServeMux()
 	serverMux.Handle("/fs", http.HandlerFunc(fsHandler))
-	serverMux.Handle("/", http.FileServer(http.Dir("./client/dist")))
+	serverMux.Handle("/", http.FileServer(http.Dir(filepath.Join(".", "client", "dist"))))
 
 	port, err := config.GetEnvValue(serverPortEnv)
 	if err != nil {
@@ -59,7 +60,7 @@ func Start(ctx context.Context) error {
 
 	log.Printf("сервер остановлен")
 
-	ctxShutDown, cancel := context.WithTimeout(context.Background(), timeCancelContext*time.Second)
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), timeCancelContext)
 	defer func() {
 		cancel()
 	}()
